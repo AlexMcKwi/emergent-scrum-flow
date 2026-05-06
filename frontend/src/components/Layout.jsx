@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { LayoutDashboard, Kanban, GitBranch, Archive, BarChart3, LogOut, CheckSquare, Calendar } from "lucide-react";
+import { LayoutDashboard, Kanban, GitBranch, Archive, BarChart3, LogOut, CheckSquare, Calendar, Mic } from "lucide-react";
+import StandupPanel from "@/components/StandupPanel";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -15,11 +16,27 @@ const navItems = [
 export default function Layout({ children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [standupOpen, setStandupOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
     navigate("/login", { replace: true });
   };
+
+  // Keyboard shortcut: "S" opens the Standup panel (ignore inputs)
+  useEffect(() => {
+    const onKey = (e) => {
+      const tag = (e.target.tagName || "").toLowerCase();
+      if (tag === "input" || tag === "textarea" || e.target.isContentEditable) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === "s" || e.key === "S") {
+        e.preventDefault();
+        setStandupOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#0A0A0B] text-[#F8F9FA] grain-bg relative">
@@ -54,6 +71,17 @@ export default function Layout({ children }) {
           </nav>
 
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setStandupOpen(true)}
+              data-testid="open-standup-btn"
+              title="Ouvrir le récap standup (raccourci: S)"
+              className="label-mono px-3 py-2 h-9 rounded-sm border border-[#FF5E00]/40 text-[#FF5E00] hover:bg-[#FF5E00] hover:text-[#0A0A0B] transition-colors duration-200 flex items-center gap-2"
+            >
+              <Mic className="w-3.5 h-3.5" />
+              Standup
+              <span className="hidden lg:inline-flex items-center justify-center w-5 h-5 ml-1 rounded-sm border border-current text-[10px]">S</span>
+            </button>
+
             {user?.picture ? (
               <img
                 src={user.picture}
@@ -85,6 +113,8 @@ export default function Layout({ children }) {
       <main className="relative z-10 max-w-7xl mx-auto px-6 py-8">
         {children}
       </main>
+
+      <StandupPanel open={standupOpen} onOpenChange={setStandupOpen} />
     </div>
   );
 }

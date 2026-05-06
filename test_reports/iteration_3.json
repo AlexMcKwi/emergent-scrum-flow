@@ -1,0 +1,63 @@
+{
+  "summary": "Iteration 3 frontend testing of the Daily Standup helper (StandupPanel + Layout header). All 12 explicit feature bullets verified end-to-end against the live preview URL with a mongosh-injected session, plus backend regression smoke on /api/auth/me and /api/tasks (200). One real UI layout bug found: the Sheet panel overflows the viewport on the right (copy buttons partially off-screen at 1920px width).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "StandupPanel (Sheet side=right)",
+        "issue": "The standup-panel Sheet overflows the viewport to the right. Measured getBoundingClientRect at 1920px viewport: x=1886.5, width=672, vw=1920 — right edge at x=2558 (~638px clipped). The 'Copier Markdown' button bbox {x:1911, w:306} is ~90% off-screen; 'Copier en texte brut' is fully off-screen. Root cause: consumer className 'w-full sm:max-w-2xl' combines with the base sheet variant's 'inset-y-0 right-0 h-full w-3/4 ... sm:max-w-sm' via cn(). While the merge picks w-full + sm:max-w-2xl (672px max), some styling is causing the element to position with its LEFT edge near right:0 rather than aligning the element's RIGHT edge at right:0. Suggest either (a) removing the 'w-full' class override (keep only 'sm:max-w-2xl') or (b) explicitly setting right-0 left-auto in the consumer className, or (c) changing base w-3/4 to not conflict.",
+        "selector": "[data-testid='standup-panel']",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "StandupPanel date inputs",
+        "issues": ["Still using native <input type='date'> for 'Hier' and 'Aujourd''hui' (browser default picker, en-US mm/dd/yyyy locale) — same shadcn-calendar suggestion carried over from iteration 2."]
+      },
+      {
+        "screen": "Sheet accessibility",
+        "issues": ["Console warning 'Missing Description or aria-describedby={undefined} for DialogContent' — add a <SheetDescription> or aria-describedby to improve accessibility."]
+      }
+    ]
+  },
+  "verified_features": [
+    "Header: 'Standup' button (data-testid='open-standup-btn') visible on /dashboard, /kanban, /stats (checked three protected pages).",
+    "Click: 'open-standup-btn' opens right-side Sheet panel (data-testid='standup-panel') with title text containing 'Récap de la cérémonie' and label '// DAILY STANDUP'.",
+    "Keyboard 'S': toggles standup panel open (first press) and close (second press) when no input is focused. Confirmed via window.keydown handler in Layout.jsx.",
+    "Keyboard 'S' ignored: when focus is on the 'Hier' date input, pressing 'S' does NOT toggle the panel (remains open) — correctly guarded by tag==='input' check.",
+    "3 sections render: HIER (count=1 in our seed), AUJOURD'HUI (count=2), BLOCAGES (count=2). Each lists item titles with status dots.",
+    "HIER filter: lists tasks where status='done' AND actual_end_date === selected 'Yesterday' date. Seed task 'TEST_standup_done_yesterday' (status=done, actual_end_date=2026-05-05) shown in HIER when yesterdayDate=2026-05-05.",
+    "AUJOURD'HUI filter: lists in_progress OR (start<=today<=due AND status!=done) OR (due==today OR start==today). Seed tasks 'TEST_standup_inprogress' (in_progress) and 'TEST_standup_due_today' (status=todo, due_date=today) both appeared.",
+    "BLOCAGES filter: both status='blocked' tasks ('TEST_standup_blocked_1', 'TEST_standup_blocked_2') appeared; count shows 2.",
+    "Date reactivity: changing 'Hier' to 2020-01-01 re-computes HIER to empty, showing fallback 'Pas de tâche terminée à cette date.' (via [data-testid='standup-empty-HIER']).",
+    "Copy Markdown (data-testid='copy-markdown-btn'): clipboard content starts with '### 🗓️ Daily Standup — 2026-05-06' and includes '**Hier (2026-05-05)**', '**Aujourd''hui (2026-05-06)**', '**Blocages**' labels and all 5 TEST_* task titles. Toast 'Markdown copié' shown.",
+    "Copy Plain Text (data-testid='copy-text-btn'): clipboard content 'Daily Standup — 2026-05-06', 'Hier (2026-05-05):', 'Aujourd''hui (2026-05-06):', 'Blocages:' and task bullets; high-priority items suffixed with '[!]'. Toast 'Texte copié' shown.",
+    "Empty fallback: 'Aucun blocage. ⚡' is the empty message for BLOCAGES in the source (not exercised in our seed since we created 2 blockers, but code path confirmed in StandupPanel.jsx line 209).",
+    "Backend regression smoke: GET /api/auth/me -> 200; GET /api/tasks -> 200 (returned the 5 seeded tasks)."
+  ],
+  "test_report_links": ["/app/backend/tests/backend_test.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Fix Sheet panel overflow: on 1920px viewport the StandupPanel sits partially outside the viewport (~640px clipped on right), making the 'Copier Markdown' and 'Copier en texte brut' buttons mostly off-screen. Likely due to 'w-full' in the consumer className interfering with the base 'right-0 w-3/4' positioning. Recommend changing className in StandupPanel.jsx line 150 from 'w-full sm:max-w-2xl' to 'sm:max-w-2xl' or add 'right-0 left-auto' explicitly.",
+    "Add <SheetDescription> (or aria-describedby) inside the SheetContent to remove the radix accessibility warning.",
+    "(Carry-over from iter2) Consider shadcn Calendar/Popover for the two date inputs in StandupPanel for consistency with dark theme and locale."
+  ],
+  "critical_code_review_comments": [
+    "StandupPanel.jsx line 150: 'w-full sm:max-w-2xl' override likely causes the right-side layout bug. Either remove 'w-full' or add explicit 'right-0 left-auto'.",
+    "StandupPanel.jsx uses data-testid='standup-empty-HIER' / -AUJOURD'HUI / -BLOCAGES — the apostrophe in -AUJOURD'HUI makes the selector awkward in CSS (needs escaping). Consider kebab-case slugs without punctuation (e.g., 'standup-empty-aujourdhui').",
+    "Layout.jsx 'S' shortcut: does not ignore when the target is inside an open Radix Dialog/Sheet body (non-input elements). Acceptable today because 'S' toggles the panel; but consider also skipping when e.repeat is true to avoid rapid-fire toggling on key hold.",
+    "StandupPanel.jsx: buildMarkdown/buildPlainText duplicate most of their structure. Could be extracted into a single builder with a formatter callback (minor DRY)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% smoke (2/2 endpoints)", "frontend": "100% of 12 explicit features pass functionally, but 1 HIGH-priority layout bug (copy buttons off-screen)"},
+  "test_credentials": "mongosh-injected: token=iter3_tok_1778102934 (cleaned up after run). Reminder for next agent: insert users.created_at and user_sessions.{created_at,expires_at} as ISO strings, not BSON Date, because backend User model expects str.",
+  "seed_data_creation": "Created 1 TEST_ user, 1 session, and 5 TEST_standup_* tasks (1 done-yesterday, 1 in_progress, 1 due-today, 2 blocked). All cleaned up via mongosh deleteMany after the run.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Preview host: backlog-master-4.preview.emergentagent.com. Cookie session_token must be secure=True, sameSite='None'. Use Playwright page.context.grant_permissions(['clipboard-read','clipboard-write'], origin=...) to read clipboard. Today in this env is 2026-05-06. The Sheet panel overflow is reproducible by opening it at viewport 1920x1080 and calling document.querySelector('[data-testid=standup-panel]').getBoundingClientRect() — x is ~1886 instead of ~1248. Functional tests click copy buttons via page.evaluate(...).click() to bypass the out-of-viewport issue.",
+  "rca of the issue": "StandupPanel Sheet overflow: In StandupPanel.jsx the SheetContent is rendered with className='... w-full sm:max-w-2xl ...'. sheet.jsx base variant for side='right' is 'inset-y-0 right-0 h-full w-3/4 border-l ... sm:max-w-sm'. After cn() merges, final classes include right-0 + w-full + sm:max-w-2xl. The radix DialogContent is fixed-positioned; with right:0 and max-width:42rem the content should anchor its right edge at the viewport edge. In practice its left edge is at ~1886px, right at ~2558px (measured via getBoundingClientRect on 1920 viewport). Most likely the 'w-full' class is being appended to 'w-3/4' without tailwind-merge (depending on the cn() implementation), producing conflicting width behavior, OR the slide-in-from-right animation's final translateX is not being reset. Mitigation: change 'w-full sm:max-w-2xl' -> 'w-full sm:w-[672px] sm:max-w-2xl right-0 left-auto' in StandupPanel.jsx line 150, or simplest: drop 'w-full' and keep just 'sm:max-w-2xl'."
+}
