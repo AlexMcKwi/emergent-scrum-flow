@@ -4,6 +4,10 @@ import { api } from "@/lib/api";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from "recharts";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
+import { tasksToCSV, downloadCSV } from "@/lib/csv";
+import { toast } from "sonner";
 
 const STATUS_LABELS = { todo: "À faire", in_progress: "En cours", blocked: "Bloqué", done: "Terminé" };
 const STATUS_COLORS = { todo: "#A1A4AB", in_progress: "#00E5FF", blocked: "#FF3366", done: "#00F298" };
@@ -15,6 +19,26 @@ export default function Stats() {
   useEffect(() => {
     api.get("/stats").then((r) => setStats(r.data));
   }, []);
+
+  const exportAll = async () => {
+    try {
+      const [active, archived] = await Promise.all([
+        api.get("/tasks", { params: { archived: false } }),
+        api.get("/tasks", { params: { archived: true } }),
+      ]);
+      const all = [...active.data, ...archived.data];
+      if (all.length === 0) {
+        toast.error("Aucune tâche à exporter");
+        return;
+      }
+      const csv = tasksToCSV(all);
+      const ts = new Date().toISOString().slice(0, 10);
+      downloadCSV(`scrumflow-all-${ts}.csv`, csv);
+      toast.success(`${all.length} tâche(s) exportée(s)`);
+    } catch {
+      toast.error("Erreur lors de l'export");
+    }
+  };
 
   if (!stats) return <Layout><p className="label-mono">Chargement…</p></Layout>;
 
@@ -36,10 +60,20 @@ export default function Stats() {
 
   return (
     <Layout>
-      <div className="mb-10">
-        <p className="label-mono text-[#FF5E00]">// STATISTIQUES</p>
-        <h1 className="font-heading font-black text-4xl md:text-5xl tracking-tighter mt-2">Analytics.</h1>
-        <p className="text-[#A1A4AB] mt-2">Mesurez votre cadence et votre flow.</p>
+      <div className="flex items-end justify-between mb-10">
+        <div>
+          <p className="label-mono text-[#FF5E00]">// STATISTIQUES</p>
+          <h1 className="font-heading font-black text-4xl md:text-5xl tracking-tighter mt-2">Analytics.</h1>
+          <p className="text-[#A1A4AB] mt-2">Mesurez votre cadence et votre flow.</p>
+        </div>
+        <Button
+          onClick={exportAll}
+          data-testid="export-all-csv-btn"
+          variant="outline"
+          className="border-white/10 text-white hover:bg-white/5 rounded-sm h-11"
+        >
+          <Download className="w-4 h-4 mr-2" /> Export CSV
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-10">

@@ -11,6 +11,7 @@ import Kanban from "@/pages/Kanban";
 import TreeView from "@/pages/TreeView";
 import ArchivePage from "@/pages/ArchivePage";
 import Stats from "@/pages/Stats";
+import CalendarView from "@/pages/CalendarView";
 
 function AppRouter() {
   const location = useLocation();
@@ -24,6 +25,7 @@ function AppRouter() {
       <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/kanban" element={<ProtectedRoute><Kanban /></ProtectedRoute>} />
+      <Route path="/calendar" element={<ProtectedRoute><CalendarView /></ProtectedRoute>} />
       <Route path="/tree" element={<ProtectedRoute><TreeView /></ProtectedRoute>} />
       <Route path="/archive" element={<ProtectedRoute><ArchivePage /></ProtectedRoute>} />
       <Route path="/stats" element={<ProtectedRoute><Stats /></ProtectedRoute>} />

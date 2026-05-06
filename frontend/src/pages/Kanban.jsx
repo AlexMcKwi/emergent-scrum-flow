@@ -7,6 +7,7 @@ import { CSS } from "@dnd-kit/utilities";
 import Layout from "@/components/Layout";
 import TaskCard from "@/components/TaskCard";
 import TaskModal from "@/components/TaskModal";
+import FilterBar, { filterTasks, collectTags } from "@/components/FilterBar";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { Plus } from "lucide-react";
@@ -70,6 +71,10 @@ export default function Kanban() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
 
+  const [search, setSearch] = useState("");
+  const [priority, setPriority] = useState("all");
+  const [tag, setTag] = useState("all");
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
   const load = async () => {
@@ -79,11 +84,16 @@ export default function Kanban() {
 
   useEffect(() => { load(); }, []);
 
+  const filtered = useMemo(
+    () => filterTasks(tasks, { search, priority, tag }),
+    [tasks, search, priority, tag]
+  );
+
   const grouped = useMemo(() => {
     const g = { todo: [], in_progress: [], blocked: [], done: [] };
-    tasks.forEach((t) => { (g[t.status] || g.todo).push(t); });
+    filtered.forEach((t) => { (g[t.status] || g.todo).push(t); });
     return g;
-  }, [tasks]);
+  }, [filtered]);
 
   const childCount = (id) => tasks.filter((t) => t.parent_id === id).length;
 
@@ -95,7 +105,6 @@ export default function Kanban() {
     const task = tasks.find((t) => t.id === active.id);
     if (!task) return;
 
-    // Determine target column: "over" can be a column id OR a card id
     let targetStatus = null;
     if (COLUMNS.find((c) => c.id === over.id)) {
       targetStatus = over.id;
@@ -105,7 +114,6 @@ export default function Kanban() {
     }
     if (!targetStatus || targetStatus === task.status) return;
 
-    // Optimistic
     setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, status: targetStatus } : t));
     try {
       await api.put(`/tasks/${task.id}`, { status: targetStatus });
@@ -136,6 +144,13 @@ export default function Kanban() {
           <Plus className="w-4 h-4 mr-2" /> Nouvelle tâche
         </Button>
       </div>
+
+      <FilterBar
+        search={search} onSearch={setSearch}
+        priority={priority} onPriority={setPriority}
+        tag={tag} onTag={setTag}
+        availableTags={collectTags(tasks)}
+      />
 
       <DndContext
         sensors={sensors}

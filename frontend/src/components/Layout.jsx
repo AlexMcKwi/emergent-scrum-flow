@@ -1,11 +1,12 @@
 import React from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { LayoutDashboard, Kanban, GitBranch, Archive, BarChart3, LogOut, CheckSquare } from "lucide-react";
+import { LayoutDashboard, Kanban, GitBranch, Archive, BarChart3, LogOut, CheckSquare, Calendar } from "lucide-react";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/kanban", label: "Kanban", icon: Kanban },
+  { to: "/calendar", label: "Calendrier", icon: Calendar },
   { to: "/tree", label: "Hiérarchie", icon: GitBranch },
   { to: "/archive", label: "Archives", icon: Archive },
   { to: "/stats", label: "Statistiques", icon: BarChart3 },

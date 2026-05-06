@@ -31,13 +31,13 @@ const empty = {
   tags: [], parent_id: null,
 };
 
-export default function TaskModal({ open, onClose, task, allTasks, onSaved, onDeleted }) {
+export default function TaskModal({ open, onClose, task, allTasks, onSaved, onDeleted, initialDate = null }) {
   const [form, setForm] = useState(empty);
   const [tagInput, setTagInput] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (task) {
+    if (task && task.id) {
       setForm({
         title: task.title || "",
         description: task.description || "",
@@ -50,10 +50,14 @@ export default function TaskModal({ open, onClose, task, allTasks, onSaved, onDe
         parent_id: task.parent_id || null,
       });
     } else {
-      setForm(empty);
+      setForm({
+        ...empty,
+        start_date: initialDate || "",
+        due_date: initialDate || "",
+      });
     }
     setTagInput("");
-  }, [task, open]);
+  }, [task, open, initialDate]);
 
   const update = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -81,7 +85,7 @@ export default function TaskModal({ open, onClose, task, allTasks, onSaved, onDe
         actual_end_date: form.actual_end_date || null,
         parent_id: form.parent_id || null,
       };
-      if (task) {
+      if (task && task.id) {
         const res = await api.put(`/tasks/${task.id}`, payload);
         toast.success("Tâche mise à jour");
         onSaved(res.data);
@@ -119,7 +123,7 @@ export default function TaskModal({ open, onClose, task, allTasks, onSaved, onDe
     } catch { toast.error("Erreur de suppression"); }
   };
 
-  const parentOptions = (allTasks || []).filter((t) => !task || t.id !== task.id);
+  const parentOptions = (allTasks || []).filter((t) => !task?.id || t.id !== task.id);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -129,7 +133,7 @@ export default function TaskModal({ open, onClose, task, allTasks, onSaved, onDe
       >
         <DialogHeader>
           <DialogTitle className="font-heading text-2xl tracking-tight">
-            {task ? "Modifier la tâche" : "Nouvelle tâche"}
+            {task && task.id ? "Modifier la tâche" : "Nouvelle tâche"}
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-5 mt-2">
@@ -274,7 +278,7 @@ export default function TaskModal({ open, onClose, task, allTasks, onSaved, onDe
 
           <div className="flex items-center justify-between pt-5 border-t border-white/10">
             <div className="flex gap-2">
-              {task && (
+              {task && task.id && (
                 <>
                   <Button type="button" variant="outline" onClick={archive}
                     data-testid="task-archive-btn"
@@ -296,7 +300,7 @@ export default function TaskModal({ open, onClose, task, allTasks, onSaved, onDe
               </Button>
               <Button type="submit" disabled={saving} data-testid="task-save-btn"
                 className="bg-[#FF5E00] hover:bg-[#FF7A33] text-[#0A0A0B] rounded-sm font-semibold">
-                {saving ? "…" : task ? "Enregistrer" : "Créer"}
+                {saving ? "…" : (task && task.id) ? "Enregistrer" : "Créer"}
               </Button>
             </div>
           </div>

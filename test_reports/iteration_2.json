@@ -1,0 +1,52 @@
+{
+  "summary": "Iteration 2 frontend testing of new search/priority/tag filters, monthly Calendar view, and CSV exports. All 7 explicit features verified end-to-end against the live preview URL with a mongosh-injected session. Backend regression smoke (auth/me, GET /tasks, POST /tasks, POST /tasks/{id}/archive, GET /stats) all 200.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/auth/me", "issue": "User pydantic model requires created_at as str — if a test seeds users.created_at as a BSON Date (not ISO string), backend returns 500. Existing playbook (/app/auth_testing.md) inserts BSON Date and would break. Suggest either coercing datetime in get_current_user or updating the playbook to insert ISO strings."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "TaskModal date inputs (used on Kanban/Calendar/Tree)", "issues": ["Uses native browser <input type=\"date\"> (shows 'mm/dd/yyyy' placeholder, locale-dependent format) instead of a shadcn Calendar/Popover component — inconsistent with the rest of the dark-themed UI and the testing guideline that flags 'browser default picker instead of shadcn calendar component'."]},
+      {"screen": "Calendar day cell '+ to add task'", "issues": ["The per-day add button is hidden via inline style.opacity=0 and only revealed via JS onMouseEnter. Not keyboard/touch accessible and not visible without hover. Consider rendering at low opacity by default or on focus."]}
+    ]
+  },
+  "verified_features": [
+    "Kanban: FilterBar visible with search/priority/tag/reset (data-testid=filter-bar, filter-search, filter-priority, filter-tag, filter-reset).",
+    "Kanban: Typing 'alpha' filtered cards live (alpha=1, bravo=0). Reset chip cleared filters.",
+    "Kanban: Priority=Haute kept only the high-priority card. Tag=bug kept only bravo.",
+    "Archives: FilterBar present and Export CSV downloads scrumflow-archive-YYYY-MM-DD.csv with header 'id,title,description,status,priority,start_date,due_date,actual_end_date,tags,parent_id,archived,created_at,updated_at' and contains the archived TEST_charlie row.",
+    "Calendar (/calendar): Monthly grid renders Mon-Sun x 6 weeks. Today cell highlighted in orange. Tasks appear in their due_date cell with status color. Prev/Next/Today nav changes the heading.",
+    "Calendar: Clicking a task opens the modal in 'Modifier la tâche' mode. Clicking 'Nouvelle tâche' opens modal titled 'Nouvelle tâche' with start_date+due_date pre-filled to today (2026-05-06). Submitting persists; after refresh the task appears on today's cell.",
+    "Calendar: Clicking '+' on a future day cell opens 'Nouvelle tâche' with due_date prefilled to that ISO date (e.g. 2026-05-16).",
+    "Stats: Export CSV downloads scrumflow-all-YYYY-MM-DD.csv with both active (TEST_alpha, TEST_calendar_created) and archived (TEST_charlie) rows.",
+    "TaskModal: With task=null OR task.id=null, title='Nouvelle tâche' and submit calls POST /api/tasks. With task.id set, title='Modifier la tâche' and submit calls PUT.",
+    "Backend regression: /api/auth/me 200, POST/GET/archive/DELETE /api/tasks 200, /api/stats 200."
+  ],
+  "not_directly_tested": [
+    "Drag-and-drop after filtering: pointer-event simulation for dnd-kit was not run (same as iter1). Backend PUT /api/tasks/{id} status update was verified via curl smoke; UI integration relies on the same code path."
+  ],
+  "test_report_links": ["/app/backend/tests/backend_test.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Replace native <input type=\"date\"> in TaskModal with a shadcn Calendar/Popover for consistent dark UI and locale-stable format.",
+    "Make per-day '+' add button on Calendar visible at low opacity by default (not opacity:0 on inline style) for accessibility/discoverability.",
+    "Either coerce non-string datetime values in get_current_user or update /app/auth_testing.md to insert created_at as ISO strings (the current playbook example produces a 500 because it inserts a BSON Date)."
+  ],
+  "critical_code_review_comments": [
+    "CalendarView.jsx: stubTask is computed but never passed to <TaskModal>; the actual flow relies on initialDate prop instead, so stubTask is dead code (also acknowledged in the inline comment) — remove it to reduce confusion.",
+    "TaskModal.jsx: useEffect resets the form on every change of `open`, including when transitioning from open->close, which clears the form just before close animation. Minor, harmless.",
+    "FilterBar PRIORITIES list is duplicated with TaskModal PRIORITIES (DRY).",
+    "csv.js: tasksToCSV does not BOM-prefix the file; Excel opens UTF-8 CSV with accents (é, à) as garbled. Consider prepending '\\ufeff' for better Excel compatibility (low priority — works fine in Numbers/LibreOffice/Sheets)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% smoke (5/5 endpoints)", "frontend": "100% (10/10 explicit features)"},
+  "test_credentials": "mongosh-injected: token=iter2b_tok_1778102376460 (cleaned up after run). For future iterations, inject created_at/expires_at as ISO strings (not BSON Date), as backend's User pydantic model expects str.",
+  "seed_data_creation": "Created 3 TEST_* tasks (alpha/bravo active, charlie archived), 1 TEST_calendar_created via UI. All cleaned via DELETE /api/tasks/{id}. Test session also dropped.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Use ISO-string dates when seeding via mongosh (user.created_at, session.expires_at, session.created_at) — backend User model is `created_at: str` and BSON Date causes 500 on /api/auth/me. The preview host is backlog-master-4.preview.emergentagent.com; cookie session_token must be set with secure=True, sameSite='None'. Calendar uses initialDate prop on TaskModal; date inputs are native HTML5 (locale: en-US shows mm/dd/yyyy). dnd-kit drag-and-drop in Kanban was not simulated through Playwright pointer events.",
+  "rca of the issue": "No bugs found in the iteration-2 features. Pre-existing minor issues: (a) auth playbook seeds BSON Date but model expects str — caused initial smoke failure during this run, worked around by re-seeding with ISO strings; (b) date pickers are browser-default and the per-day '+' button has opacity:0 by default — both UX-only, no functional break."
+}
