@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,7 +54,7 @@ const STATUS_DOT = {
   todo: "#A1A4AB", in_progress: "#00E5FF", blocked: "#FF3366", done: "#00F298",
 };
 
-function Section({ title, count, color, icon: Icon, items, empty }) {
+function Section({ title, slug, count, color, icon: Icon, items, empty }) {
   return (
     <div className="surface rounded-sm p-5">
       <div className="flex items-center justify-between mb-4">
@@ -65,7 +65,7 @@ function Section({ title, count, color, icon: Icon, items, empty }) {
         <span className="font-heading font-bold text-2xl" style={{ color }}>{count}</span>
       </div>
       {items.length === 0 ? (
-        <p className="text-sm text-[#A1A4AB]" data-testid={`standup-empty-${title}`}>{empty}</p>
+        <p className="text-sm text-[#A1A4AB]" data-testid={`standup-empty-${slug}`}>{empty}</p>
       ) : (
         <ul className="space-y-2">
           {items.map((t) => (
@@ -147,7 +147,7 @@ export default function StandupPanel({ open, onOpenChange }) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="bg-[#0A0A0B] border-l border-white/10 text-white w-full sm:max-w-2xl overflow-y-auto"
+        className="bg-[#0A0A0B] border-l border-white/10 text-white sm:max-w-2xl overflow-y-auto"
         data-testid="standup-panel"
       >
         <SheetHeader className="text-left">
@@ -155,9 +155,9 @@ export default function StandupPanel({ open, onOpenChange }) {
           <SheetTitle className="font-heading font-black tracking-tighter text-3xl text-white">
             Récap de la cérémonie.
           </SheetTitle>
-          <p className="text-sm text-[#A1A4AB]">
+          <SheetDescription className="text-sm text-[#A1A4AB]">
             Auto-généré depuis vos tâches. Ajustez la date "Hier" si besoin.
-          </p>
+          </SheetDescription>
         </SheetHeader>
 
         <div className="grid grid-cols-2 gap-4 mt-6">
@@ -186,6 +186,7 @@ export default function StandupPanel({ open, onOpenChange }) {
         <div className="space-y-4 mt-6">
           <Section
             title="HIER"
+            slug="hier"
             color="#00F298"
             icon={ListChecks}
             count={yesterday.length}
@@ -194,6 +195,7 @@ export default function StandupPanel({ open, onOpenChange }) {
           />
           <Section
             title="AUJOURD'HUI"
+            slug="aujourdhui"
             color="#00E5FF"
             icon={Mic}
             count={today.length}
@@ -202,6 +204,7 @@ export default function StandupPanel({ open, onOpenChange }) {
           />
           <Section
             title="BLOCAGES"
+            slug="blocages"
             color="#FF3366"
             icon={AlertOctagon}
             count={blockers.length}

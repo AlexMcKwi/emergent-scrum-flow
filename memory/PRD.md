@@ -51,6 +51,14 @@
 - [x] User model coerces non-string `created_at` (BSON Date safe)
 - [x] Frontend testing agent: 10/10 features verified
 
+## Implemented (2026-02-XX — Iteration 3)
+- [x] Daily Standup helper: right-side Sheet panel auto-generating Hier / Aujourd'hui / Blocages
+- [x] Header button "Standup" + raccourci clavier `S` (ignoré dans les inputs)
+- [x] Date pickers pour ajuster "Hier" et "Aujourd'hui"
+- [x] Copier en Markdown (Slack/Teams) ou texte brut, avec toast de confirmation
+- [x] Accessibilité Sheet (SheetDescription) + slugs sans apostrophes
+- [x] Layout fix: panneau Sheet correctement aligné à droite (suppression du `w-full` conflictuel)
+
 ## Backlog (prioritized)
 - P1: Enum validation on priority/status in Pydantic
 - P1: Cross-user parent_id validation
