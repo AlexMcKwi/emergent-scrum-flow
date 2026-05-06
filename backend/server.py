@@ -30,6 +30,17 @@ class User(BaseModel):
     picture: Optional[str] = None
     created_at: Optional[str] = None
 
+    @classmethod
+    def from_doc(cls, doc: dict) -> "User":
+        d = dict(doc)
+        ca = d.get("created_at")
+        if ca is not None and not isinstance(ca, str):
+            try:
+                d["created_at"] = ca.isoformat()
+            except Exception:
+                d["created_at"] = str(ca)
+        return cls(**d)
+
 
 class SessionCreate(BaseModel):
     session_id: str
@@ -97,7 +108,7 @@ async def get_current_user(request: Request) -> User:
     user_doc = await db.users.find_one({"user_id": session_doc["user_id"]}, {"_id": 0})
     if not user_doc:
         raise HTTPException(status_code=401, detail="User not found")
-    return User(**user_doc)
+    return User.from_doc(user_doc)
 
 
 # ============ Auth endpoints ============
@@ -150,7 +161,7 @@ async def create_session(payload: SessionCreate, response: Response):
         path="/",
     )
     user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0})
-    return {"user": user_doc}
+    return {"user": User.from_doc(user_doc).model_dump()}
 
 
 @api_router.get("/auth/me")

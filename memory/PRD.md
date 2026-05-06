@@ -42,6 +42,15 @@
 - [x] Dark theme with Chivo / IBM Plex / JetBrains Mono
 - [x] Backend pytest 13/13 passing
 
+## Implemented (2026-02-XX — Iteration 2)
+- [x] Reusable `FilterBar` component (search + priority + tag + reset)
+- [x] Filters integrated on Kanban (preserves drag-drop) and Archives
+- [x] Monthly Calendar view at /calendar (Mon→Sun grid, today highlight, status colors, prev/next/today nav, click-to-edit, day-cell quick-add with date prefill)
+- [x] CSV export on Archives (filtered) and Stats (all tasks). UTF-8 BOM for Excel compatibility.
+- [x] TaskModal accepts `initialDate` prop for date prefill from Calendar
+- [x] User model coerces non-string `created_at` (BSON Date safe)
+- [x] Frontend testing agent: 10/10 features verified
+
 ## Backlog (prioritized)
 - P1: Enum validation on priority/status in Pydantic
 - P1: Cross-user parent_id validation

@@ -18,7 +18,8 @@ export function tasksToCSV(tasks) {
 }
 
 export function downloadCSV(filename, csv) {
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  // Prepend UTF-8 BOM so Excel opens accented characters correctly.
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

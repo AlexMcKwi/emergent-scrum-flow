@@ -162,12 +162,9 @@ export default function CalendarView() {
                   </span>
                   <button
                     onClick={() => openCreate(iso)}
-                    className="opacity-0 hover:opacity-100 text-[#A1A4AB] hover:text-white"
+                    className="text-[#565961] hover:text-white opacity-40 hover:opacity-100 transition-opacity"
                     aria-label="Add task this day"
                     data-testid={`calendar-add-${iso}`}
-                    style={{ opacity: 0 }}
-                    onMouseEnter={(e) => (e.currentTarget.style.opacity = 1)}
-                    onMouseLeave={(e) => (e.currentTarget.style.opacity = 0)}
                   >
                     <Plus className="w-3 h-3" />
                   </button>
