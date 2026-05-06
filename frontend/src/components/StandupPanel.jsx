@@ -61,7 +61,7 @@ const STATUS_DOT = {
   todo: "#A1A4AB", in_progress: "#00E5FF", blocked: "#FF3366", done: "#00F298",
 };
 
-function Section({ title, slug, count, color, icon: Icon, items, empty }) {
+function Section({ title, slug, count, sp, color, icon: Icon, items, empty }) {
   return (
     <div className="surface rounded-sm p-5">
       <div className="flex items-center justify-between mb-4">
@@ -69,7 +69,10 @@ function Section({ title, slug, count, color, icon: Icon, items, empty }) {
           <Icon className="w-4 h-4" style={{ color }} />
           <p className="label-mono" style={{ color }}>// {title}</p>
         </div>
-        <span className="font-heading font-bold text-2xl" style={{ color }}>{count}</span>
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[10px] uppercase tracking-wider text-[#A1A4AB]" data-testid={`standup-section-sp-${slug}`}>{sp} SP</span>
+          <span className="font-heading font-bold text-2xl" style={{ color }}>{count}</span>
+        </div>
       </div>
       {items.length === 0 ? (
         <p className="text-sm text-[#A1A4AB]" data-testid={`standup-empty-${slug}`}>{empty}</p>
@@ -94,6 +97,11 @@ function Section({ title, slug, count, color, icon: Icon, items, empty }) {
                   </div>
                 )}
               </div>
+              {t.story_points != null && (
+                <span className="font-mono text-[10px] font-semibold px-1.5 py-0.5 rounded-sm bg-[#FF5E00]/10 border border-[#FF5E00]/30 text-[#FF5E00]">
+                  {t.story_points} SP
+                </span>
+              )}
               {t.priority === "high" && (
                 <span className="label-mono text-[9px] text-[#FF3366]">HIGH</span>
               )}

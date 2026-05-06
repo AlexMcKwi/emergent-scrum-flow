@@ -59,6 +59,14 @@
 - [x] Accessibilité Sheet (SheetDescription) + slugs sans apostrophes
 - [x] Layout fix: panneau Sheet correctement aligné à droite (suppression du `w-full` conflictuel)
 
+## Implemented (2026-02-XX — Iteration 4)
+- [x] `story_points` (Optional[int]) ajouté au modèle Task (échelle Fibonacci 1/2/3/5/8/13/21)
+- [x] Sélecteur SP dans le TaskModal + badge SP orange sur les TaskCard (Kanban, Dashboard, Tree, Calendar, Archives)
+- [x] `/api/stats` étendu : `total_points_completed`, `points_active`, `velocity_avg`, `weekly_velocity` (8 dernières semaines, archivés inclus pour l'historique)
+- [x] Page Stats : 3 KPIs SP + chart Velocity (8 semaines, barres + tendance 3-sem en moyenne mobile)
+- [x] StandupPanel : grille SP HIER / SP AUJ. / SP BLOQUÉS, totaux SP par section, badge SP par item, totaux dans le markdown/texte copié
+- [x] Backend : `PUT /api/tasks/{id}` utilise `exclude_unset=True` (permet de remettre un champ à `null`)
+
 ## Backlog (prioritized)
 - P1: Enum validation on priority/status in Pydantic
 - P1: Cross-user parent_id validation

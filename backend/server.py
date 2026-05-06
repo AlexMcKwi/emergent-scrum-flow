@@ -224,7 +224,7 @@ async def get_task(task_id: str, user: User = Depends(get_current_user)):
 
 @api_router.put("/tasks/{task_id}", response_model=Task)
 async def update_task(task_id: str, payload: TaskUpdate, user: User = Depends(get_current_user)):
-    updates = {k: v for k, v in payload.model_dump().items() if v is not None}
+    updates = payload.model_dump(exclude_unset=True)
     if not updates:
         doc = await db.tasks.find_one({"id": task_id, "user_id": user.user_id}, {"_id": 0})
         if not doc:
