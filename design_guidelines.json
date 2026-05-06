@@ -1,0 +1,113 @@
+{
+  "theme": "dark",
+  "archetype": "Swiss & High-Contrast",
+  "archetype_reasoning": "The IT Business Analyst context demands high data density, functional clarity, and authority. The Dark Theme aligns with the modern dev/tech environment requested, reducing eye strain during long sessions while allowing critical data (kanban tags, charts) to stand out sharply.",
+  "colors": {
+    "background": {
+      "app": "#0A0A0B",
+      "surface": "#131418",
+      "surface_hover": "#1D1E24",
+      "overlay": "rgba(10, 10, 11, 0.7)"
+    },
+    "text": {
+      "primary": "#F8F9FA",
+      "secondary": "#A1A4AB",
+      "disabled": "#565961",
+      "inverse": "#0A0A0B"
+    },
+    "border": {
+      "default": "rgba(255, 255, 255, 0.08)",
+      "focus": "#FF5E00"
+    },
+    "accent": {
+      "primary": "#FF5E00",
+      "primary_hover": "#FF7A33",
+      "secondary": "#00E5FF",
+      "success": "#00F298",
+      "warning": "#FFC400",
+      "danger": "#FF3366"
+    },
+    "kanban_status": {
+      "todo": "#A1A4AB",
+      "in_progress": "#00E5FF",
+      "blocked": "#FF3366",
+      "done": "#00F298"
+    }
+  },
+  "typography": {
+    "font_families": {
+      "heading": "'Chivo', sans-serif",
+      "body": "'IBM Plex Sans', sans-serif",
+      "mono": "'JetBrains Mono', monospace"
+    },
+    "scales": {
+      "h1": "text-4xl tracking-tighter font-black",
+      "h2": "text-2xl tracking-tight font-bold",
+      "h3": "text-xl tracking-tight font-semibold",
+      "h4": "text-lg tracking-tight font-medium",
+      "body": "text-sm leading-relaxed",
+      "micro": "text-xs tracking-[0.05em] uppercase font-mono"
+    },
+    "rules": [
+      "Headings strictly use Chivo, avoid Inter for headings.",
+      "Labels/Overlines must be uppercase JetBrains Mono with generous tracking.",
+      "No jumping hierarchy gaps (H1 -> H2, not H1 -> H4)."
+    ]
+  },
+  "spacing_and_layout": {
+    "container": "max-w-7xl mx-auto px-6",
+    "dashboard_grid": "grid grid-cols-1 md:grid-cols-4 gap-6",
+    "kanban_grid": "grid grid-cols-1 md:grid-cols-4 gap-4 h-full",
+    "padding": "Generous padding: p-6 or p-8 for cards instead of default p-4 to allow data to breathe.",
+    "rules": [
+      "Use 'Control Room' dense grid strategy for the dashboard.",
+      "Subtle 1px borders (border-white/10) instead of heavy shadows.",
+      "No pure black backgrounds - use the tinted obsidian base."
+    ]
+  },
+  "components": {
+    "cards": "Flat background (#131418), 1px subtle border, no shadow by default. On hover: slight lift (-translate-y-1), border color brightens to border-white/20.",
+    "buttons": "Primary: Solid #FF5E00 background, #0A0A0B text, crisp square edges (rounded-sm), strong hover contrast. Secondary: Transparent with border-white/10, text-white, hover bg-white/5.",
+    "kanban_cards": "Neo-brutalist tech edge. rounded-sm, border-white/10. Use left border color-coding for status (e.g., border-l-2 border-l-[#00E5FF] for In Progress).",
+    "modals": "Glassmorphism for overlays (backdrop-blur-xl bg-black/60). Modal content uses solid #131418 with border-white/10.",
+    "inputs": "Shadcn based. Dark background, 1px border, focus state uses focus:ring-1 focus:ring-[#FF5E00] focus:border-[#FF5E00].",
+    "tree_view": "Clear indentations using solid vertical lines (border-l border-white/10). Expand/collapse icons using Phosphor or Lucide.",
+    "nav_header": "Sticky top, crystal glass (backdrop-blur-xl bg-[#0A0A0B]/80), bottom border border-white/5. Must contain Logo and primary user actions."
+  },
+  "motion_and_interaction": {
+    "hover": "All interactive elements must have defined hover states changing background or border. Text color must stay accessible.",
+    "transitions": "Use specific transition properties (e.g., transition-colors duration-200, transition-transform).",
+    "drag_drop": "Kanban drag operations should rotate the card slightly (rotate-2) and increase border opacity."
+  },
+  "accessibility_and_testing": {
+    "contrast": "Ensure text against #131418 meets APCA guidelines. Use Text Shadow on images if needed.",
+    "testing": "All interactive and key informational elements MUST include a data-testid attribute in kebab-case (e.g., 'kanban-task-card', 'create-task-btn')."
+  },
+  "media_and_icons": {
+    "icon_library": "@phosphor-icons/react",
+    "icon_library_reason": "Matches the technical, dense dashboard requirement with crisp, geometric duotone/regular variants.",
+    "images": {
+      "login_background": {
+        "url": "https://images.unsplash.com/photo-1696595883516-76c97aa3a164?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MDV8MHwxfHNlYXJjaHwyfHxkYXJrJTIwbW9kZSUyMGFic3RyYWN0JTIwdGVjaCUyMGFyY2hpdGVjdHVyYWwlMjBiYWNrZ3JvdW5kJTIwdGV4dHVyZXxlbnwwfHx8fDE3NzgxMDA1NTN8MA&ixlib=rb-4.1.0&q=85",
+        "usage": "Use as a full-cover, low-opacity (opacity-20 to 30) background on the Google Login screen to give it depth and a premium feel."
+      },
+      "avatar_1": {
+        "url": "https://images.unsplash.com/photo-1655249493799-9cee4fe983bb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MDV8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjBidXNpbmVzcyUyMHBvcnRyYWl0JTIwaGVhZHNob3R8ZW58MHx8fHwxNzc4MTAwNTQ4fDA&ixlib=rb-4.1.0&q=85",
+        "usage": "Use as dummy user avatar in header/settings."
+      },
+      "avatar_2": {
+        "url": "https://images.unsplash.com/photo-1655249481446-25d575f1c054?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MDV8MHwxfHNlYXJjaHwzfHxwcm9mZXNzaW9uYWwlMjBidXNpbmVzcyUyMHBvcnRyYWl0JTIwaGVhZHNob3R8ZW58MHx8fHwxNzc4MTAwNTQ4fDA&ixlib=rb-4.1.0&q=85",
+        "usage": "Use as dummy assignee avatar in Kanban cards."
+      }
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly follow the color palette, do not use generic Tailwind colors like slate-900 everywhere. Use the exact hex codes or add them to tailwind.config.js.",
+    "For the Kanban board, use a robust drag-and-drop library (e.g., dnd-kit or react-beautiful-dnd) and design the columns with the specified borders.",
+    "Do NOT use 'Inter' for headings. Inject Google Fonts (Chivo, IBM Plex Sans, JetBrains Mono) into the index.html or layout file.",
+    "Implement the Google Login screen as the first entry point, using the provided architectural background image with a glassmorphism card over it.",
+    "Task details must include hierarchical rendering (Parent/Child). Indent children in a Tree View or visually link them in detail modals.",
+    "In the stats page, use Shadcn Charts (recharts) with the exact accent colors provided for consistency.",
+    "Ensure all buttons, cards, and inputs have the required data-testid."
+  ]
+}
