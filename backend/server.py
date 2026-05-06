@@ -56,6 +56,7 @@ class TaskBase(BaseModel):
     status: str = "todo"                  # todo | in_progress | blocked | done
     tags: List[str] = Field(default_factory=list)
     parent_id: Optional[str] = None
+    story_points: Optional[int] = None
 
 
 class TaskCreate(TaskBase):
@@ -73,6 +74,7 @@ class TaskUpdate(BaseModel):
     tags: Optional[List[str]] = None
     parent_id: Optional[str] = None
     archived: Optional[bool] = None
+    story_points: Optional[int] = None
 
 
 class Task(TaskBase):
@@ -286,7 +288,8 @@ async def unarchive_task(task_id: str, user: User = Depends(get_current_user)):
 @api_router.get("/stats")
 async def get_stats(user: User = Depends(get_current_user)):
     docs = await db.tasks.find({"user_id": user.user_id}, {"_id": 0}).to_list(10000)
-    today = datetime.now(timezone.utc).date().isoformat()
+    today_dt = datetime.now(timezone.utc).date()
+    today = today_dt.isoformat()
 
     by_status = {"todo": 0, "in_progress": 0, "blocked": 0, "done": 0}
     by_priority = {"low": 0, "medium": 0, "high": 0}
@@ -297,16 +300,43 @@ async def get_stats(user: User = Depends(get_current_user)):
     avg_duration_days = 0.0
     durations = []
 
+    # Story points
+    total_points_completed = 0
+    points_active = 0
+
+    # Build last 8 weeks (Mon-Sun), oldest first
+    # Today's Monday
+    today_monday = today_dt - timedelta(days=today_dt.weekday())
+    weeks = []
+    for i in range(7, -1, -1):
+        wstart = today_monday - timedelta(weeks=i)
+        wend = wstart + timedelta(days=6)
+        weeks.append({"start": wstart.isoformat(), "end": wend.isoformat(), "points": 0, "tasks": 0})
+
     for d in docs:
         if d.get("archived"):
             archived += 1
+            # archived tasks still count their delivered points if they were done
+            sp = d.get("story_points") or 0
+            if d.get("status") == "done" and sp:
+                total_points_completed += sp
+                ed = d.get("actual_end_date")
+                if ed:
+                    for w in weeks:
+                        if w["start"] <= ed <= w["end"]:
+                            w["points"] += sp
+                            w["tasks"] += 1
+                            break
             continue
         s = d.get("status", "todo")
         by_status[s] = by_status.get(s, 0) + 1
         p = d.get("priority", "medium")
         by_priority[p] = by_priority.get(p, 0) + 1
+        sp = d.get("story_points") or 0
         if s == "done":
             completed += 1
+            if sp:
+                total_points_completed += sp
             sd = d.get("start_date")
             ed = d.get("actual_end_date")
             if sd and ed:
@@ -315,14 +345,24 @@ async def get_stats(user: User = Depends(get_current_user)):
                     durations.append(max(days, 0))
                 except Exception:
                     pass
+            if ed and sp:
+                for w in weeks:
+                    if w["start"] <= ed <= w["end"]:
+                        w["points"] += sp
+                        w["tasks"] += 1
+                        break
         else:
             active += 1
+            if sp:
+                points_active += sp
             due = d.get("due_date")
             if due and due < today:
                 overdue += 1
 
     if durations:
         avg_duration_days = round(sum(durations) / len(durations), 1)
+
+    velocity_avg = round(sum(w["points"] for w in weeks) / len(weeks), 1) if weeks else 0.0
 
     return {
         "total": len(docs),
@@ -333,6 +373,10 @@ async def get_stats(user: User = Depends(get_current_user)):
         "by_status": by_status,
         "by_priority": by_priority,
         "avg_duration_days": avg_duration_days,
+        "total_points_completed": total_points_completed,
+        "points_active": points_active,
+        "velocity_avg": velocity_avg,
+        "weekly_velocity": weeks,
     }
 
 

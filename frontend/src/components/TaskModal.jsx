@@ -23,12 +23,22 @@ const PRIORITIES = [
   { value: "medium", label: "Moyenne" },
   { value: "high", label: "Haute" },
 ];
+const STORY_POINTS = [
+  { value: "none", label: "—" },
+  { value: "1", label: "1" },
+  { value: "2", label: "2" },
+  { value: "3", label: "3" },
+  { value: "5", label: "5" },
+  { value: "8", label: "8" },
+  { value: "13", label: "13" },
+  { value: "21", label: "21" },
+];
 
 const empty = {
   title: "", description: "",
   start_date: "", due_date: "", actual_end_date: "",
   priority: "medium", status: "todo",
-  tags: [], parent_id: null,
+  tags: [], parent_id: null, story_points: null,
 };
 
 export default function TaskModal({ open, onClose, task, allTasks, onSaved, onDeleted, initialDate = null }) {
@@ -48,6 +58,7 @@ export default function TaskModal({ open, onClose, task, allTasks, onSaved, onDe
         status: task.status || "todo",
         tags: task.tags || [],
         parent_id: task.parent_id || null,
+        story_points: task.story_points ?? null,
       });
     } else {
       setForm({
@@ -84,6 +95,7 @@ export default function TaskModal({ open, onClose, task, allTasks, onSaved, onDe
         due_date: form.due_date || null,
         actual_end_date: form.actual_end_date || null,
         parent_id: form.parent_id || null,
+        story_points: form.story_points ? Number(form.story_points) : null,
       };
       if (task && task.id) {
         const res = await api.put(`/tasks/${task.id}`, payload);
@@ -192,7 +204,7 @@ export default function TaskModal({ open, onClose, task, allTasks, onSaved, onDe
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <Label className="label-mono">Statut</Label>
               <Select value={form.status} onValueChange={(v) => update("status", v)}>
@@ -220,6 +232,25 @@ export default function TaskModal({ open, onClose, task, allTasks, onSaved, onDe
                 </SelectTrigger>
                 <SelectContent className="bg-[#131418] border-white/10 text-white">
                   {PRIORITIES.map((p) => (
+                    <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="label-mono">Story points</Label>
+              <Select
+                value={form.story_points == null ? "none" : String(form.story_points)}
+                onValueChange={(v) => update("story_points", v === "none" ? null : Number(v))}
+              >
+                <SelectTrigger
+                  data-testid="task-story-points-select"
+                  className="bg-[#0A0A0B] border-white/10 text-white mt-2 rounded-sm"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#131418] border-white/10 text-white">
+                  {STORY_POINTS.map((p) => (
                     <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
                   ))}
                 </SelectContent>

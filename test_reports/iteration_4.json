@@ -1,0 +1,95 @@
+{
+  "summary": "Iteration 4 backend + frontend testing for story_points and velocity. Backend: 12 new pytest cases (+ 13 regression) all green except 1 documented xfail for null-clearing. Frontend: SP UI surfaces verified end-to-end via Playwright with mongosh-injected session. Found 2 real frontend bugs in StandupPanel (per-item SP badge missing; section header 'X SP' total missing) and 1 backend behaviour gap (PUT cannot null story_points).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "PUT /api/tasks/{id}",
+        "issue": "Sending story_points=null does NOT clear the field. server.py:227 builds updates with `if v is not None`, which strips explicit nulls. Spec says 'PUT can update or null it'. Fix: switch to payload.model_dump(exclude_unset=True) and keep None values, OR accept a sentinel like 0 with explicit semantics. Currently the only way the UI can null out SP is to delete+recreate the task."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "StandupPanel > Section",
+        "issue": "Spec: 'each item shows the SP badge if story_points set'. Reality: zero standup-item-* elements render any SP badge. The Section component (StandupPanel.jsx lines 78-101) only renders title/tags/HIGH but never renders t.story_points. Only the markdown/plain text export contains the SP per item, the on-screen list does not. Fix: add `{t.story_points != null && <span className='label-mono text-[10px] text-[#FF5E00]'>{t.story_points} SP</span>}` inside the <li>.",
+        "selector": "[data-testid^='standup-item-']",
+        "priority": "HIGH"
+      },
+      {
+        "component": "StandupPanel > Section header",
+        "issue": "Spec: 'section headers show X SP'. The parent passes sp={sumSP(items)} but the Section component (StandupPanel.jsx line 64) does not destructure or render the `sp` prop. Header only shows the count number. Visible DOM example: '// HIER 1 TEST_...' should be '// HIER 1 · 5 SP TEST_...'. Fix: destructure sp and render alongside count, e.g. <span>{count}</span><span className='label-mono ml-2 opacity-70'>{sp} SP</span>.",
+        "selector": "[data-testid='standup-panel'] .surface > .flex.items-center.justify-between",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "TaskModal / StandupPanel",
+        "issues": [
+          "Carry-over from iter2/iter3: native <input type='date'> used in TaskModal (start/due/actual end) and StandupPanel (Hier/Aujourd'hui) — locale shows mm/dd/yyyy. Suggest shadcn Calendar+Popover for theme/locale consistency.",
+          "Carry-over from iter3: Radix dialog warning 'Missing Description or aria-describedby={undefined} for {DialogContent}' in TaskModal (StandupPanel was fixed). Add a <DialogDescription>."
+        ]
+      },
+      {
+        "screen": "Stats Velocity chart",
+        "issues": [
+          "X-axis tick text is empty in DOM (.recharts-cartesian-axis-tick text count = 0) on the rendered chart, even though 8 bars render. Likely the X axis is configured without tick labels OR the labels are rendered outside the .recharts-xAxis selector — visually the screenshot shows tick labels exist, so this may just be a selector mismatch and not a real bug. Worth a manual eyeball at /stats."
+        ]
+      }
+    ]
+  },
+  "verified_features": [
+    "Backend POST /api/tasks accepts optional story_points (int) and persists it (verified via GET).",
+    "Backend PUT /api/tasks/{id} can update story_points to a new int value.",
+    "Backend GET /api/stats returns total_points_completed, points_active, velocity_avg, weekly_velocity (8 buckets, each Mon→Sun).",
+    "Backend weekly_velocity correctly buckets a done task by actual_end_date (Wed of current week → current week bucket).",
+    "Backend archived done tasks still contribute to total_points_completed AND weekly_velocity.",
+    "Backend tasks without story_points contribute 0 SP, completed counter still bumps.",
+    "Backend done tasks older than 8 weeks count toward total_points_completed but NOT into any weekly bucket.",
+    "Backend velocity_avg == round(sum(weekly.points)/8, 1).",
+    "Backend regression: every old /api/stats key still present; CRUD, archive/unarchive, parent unlink, user scoping all green.",
+    "Frontend TaskModal: story-points-select shows exactly ['—','1','2','3','5','8','13','21'] (Fibonacci).",
+    "Frontend TaskCard: orange 'X SP' badge with data-testid=task-sp-{id} renders when story_points != null.",
+    "Frontend Stats: 3 SP KPI tiles (data-testid stats-sp-kpi-...) visible — SP livrés (total)=18, SP en cours=11, Velocity moy.=2.2.",
+    "Frontend Stats: data-testid='chart-velocity' renders 8 recharts bars + cyan trend line (3-week MA).",
+    "Frontend StandupPanel: standup-sp-summary 3-cell grid SP HIER 5 / SP AUJ. 3 / SP BLOQUÉS 8 sums correctly.",
+    "Frontend StandupPanel Copy Markdown: contains '5 SP livrés hier · 3 SP prévus aujourd'hui · 8 SP bloqués', section headers include '— X SP', items include '_(X SP)_'.",
+    "Frontend StandupPanel Copy Plain Text: same SP summary line and per-item '(X SP)'."
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_iteration4.py",
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "FRONTEND HIGH: Render per-item SP badge inside StandupPanel.jsx Section <li> when t.story_points != null (spec calls for it; markdown already has it).",
+    "FRONTEND HIGH: Render the `sp` prop in StandupPanel.jsx Section header (currently passed but never destructured); show count + SP total like '1 · 5 SP'.",
+    "BACKEND MINOR: server.py update_task strips None values, so PUT story_points=null cannot clear SP; either use exclude_unset and keep None values, or document that clients must omit/skip the field. Spec explicitly says it should null.",
+    "DESIGN: replace native date inputs with shadcn Calendar (carry-over from iter2/iter3).",
+    "A11Y: add <DialogDescription> in TaskModal to silence Radix warning."
+  ],
+  "critical_code_review_comments": [
+    "StandupPanel.jsx:64 Section({title,slug,count,color,icon,items,empty}) — drops `sp` from props (parent passes sp={sumSP(items)} on lines 218/228/etc). Either remove the unused prop in the parent or render it. Currently this is dead data flow.",
+    "StandupPanel.jsx:78-101 — items list ignores t.story_points. Inconsistent with the markdown/text exporters that DO emit (X SP).",
+    "server.py:227 update_task: `updates = {k:v for k,v in payload.model_dump().items() if v is not None}` makes optional fields un-nullable via PUT. Common pitfall; consider model_dump(exclude_unset=True) so the client can opt-in to nulling specific fields.",
+    "server.py:288 get_stats — story-points / weekly-velocity logic is duplicated for archived vs non-archived branches. Extract a small helper to keep the two paths in lock-step (already drifted slightly: archived branch only buckets when status=='done' AND sp truthy, non-archived branch buckets when ed AND sp — same outcome today but easy to drift).",
+    "Stats.jsx data-testid for SP KPIs uses the French label as the suffix (e.g. 'stats-sp-kpi-SP livrés (total)') including spaces, accents and parentheses. This works for [data-testid^=...] selectors but is fragile; prefer kebab-case slugs ('stats-sp-kpi-total','-active','-avg').",
+    "TaskModal.jsx:98 payload sends `story_points: form.story_points ? Number(form.story_points) : null`. The truthy check rejects 0, but UI options exclude 0 so harmless today. Will silently coerce null when null is sent which the backend then drops — see backend bug above."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration4.py (NEW: 12 cases for story_points + velocity)"
+  ],
+  "success_rate": {
+    "backend": "100% (24 passed, 1 xfail documenting null-clear gap, out of 25)",
+    "frontend": "12 of 14 spec bullets pass; 2 fail (per-item SP badge in standup, section header SP total)"
+  },
+  "test_credentials": "mongosh-injected and cleaned up: TOKEN1=iter4_tok1_1778103762 / USERID1=iter4-user1-1778103762 / TOKEN2=iter4_tok2_1778103762.",
+  "seed_data_creation": "Seeded 5 TEST_iter4_ui_* tasks (done-yesterday/inprog-today/blocked/done-lastweek/no-sp). Cleaned via deleteMany({title:/^TEST_/}). Backend test fixtures self-cleanup via the `cleanup` pytest fixture.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Preview host: backlog-master-4.preview.emergentagent.com. Today=2026-05-06. The two HIGH frontend bugs are localised to StandupPanel.jsx Section component (lines 64-105). The backend null-clear bug is in server.py update_task (line 227). Reuse /app/backend/tests/test_iteration4.py — set env TEST_TOKEN1 / TEST_USERID1 / REACT_APP_BACKEND_URL. Use mongosh inject pattern from /app/auth_testing.md (ISO-string created_at/expires_at). To reproduce frontend bug, seed any task with story_points and status in {done@yesterday | in_progress | blocked} then open Standup — items render without SP and section headers show only count.",
+  "rca of the issue": "1) Standup per-item SP missing: <Section> JSX in StandupPanel.jsx (lines 78-101) was never updated to read t.story_points; only the markdown/plain-text exporters were. The data is on the task object — purely a missing JSX node. 2) Section header SP missing: parent Standup<...> calls render <Section sp={sumSP(items)}> but the Section signature `function Section({ title, slug, count, color, icon: Icon, items, empty })` (line 64) omits `sp`, so the value never reaches the DOM. 3) Backend null-clear: update_task filter `if v is not None` strips explicit nulls; FastAPI/Pydantic distinguishes 'unset' from 'set-to-null' but the dict-comp collapses both into 'unset'. Use payload.model_dump(exclude_unset=True) (or compare against payload.model_fields_set) to preserve intentional nulls."
+}

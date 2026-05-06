@@ -14,20 +14,25 @@ const yesterdayISO = () => {
   return d.toISOString().slice(0, 10);
 };
 
+const sumSP = (items) => items.reduce((s, t) => s + (t.story_points || 0), 0);
+
 function buildMarkdown({ yesterdayDate, todayDate, yesterday, today, blockers }) {
   const fmtList = (items) =>
     items.length === 0 ? "_aucune_" :
-    items.map((t) => `- **${t.title}**${t.priority === "high" ? " ⚠️" : ""}${t.tags?.length ? ` _(${t.tags.join(", ")})_` : ""}`).join("\n");
+    items.map((t) => `- **${t.title}**${t.story_points ? ` _(${t.story_points} SP)_` : ""}${t.priority === "high" ? " ⚠️" : ""}${t.tags?.length ? ` _#${t.tags.join(" #")}_` : ""}`).join("\n");
+  const yp = sumSP(yesterday), tp = sumSP(today), bp = sumSP(blockers);
   return [
     `### 🗓️ Daily Standup — ${todayDate}`,
     "",
-    `**Hier (${yesterdayDate})**`,
+    `_${yp} SP livrés hier · ${tp} SP prévus aujourd'hui · ${bp} SP bloqués_`,
+    "",
+    `**Hier (${yesterdayDate})** — ${yp} SP`,
     fmtList(yesterday),
     "",
-    `**Aujourd'hui (${todayDate})**`,
+    `**Aujourd'hui (${todayDate})** — ${tp} SP`,
     fmtList(today),
     "",
-    `**Blocages**`,
+    `**Blocages** — ${bp} SP`,
     fmtList(blockers),
   ].join("\n");
 }
@@ -35,17 +40,19 @@ function buildMarkdown({ yesterdayDate, todayDate, yesterday, today, blockers })
 function buildPlainText({ yesterdayDate, todayDate, yesterday, today, blockers }) {
   const fmtList = (items) =>
     items.length === 0 ? "  (aucune)" :
-    items.map((t) => `  • ${t.title}${t.priority === "high" ? " [!]" : ""}`).join("\n");
+    items.map((t) => `  • ${t.title}${t.story_points ? ` (${t.story_points} SP)` : ""}${t.priority === "high" ? " [!]" : ""}`).join("\n");
+  const yp = sumSP(yesterday), tp = sumSP(today), bp = sumSP(blockers);
   return [
     `Daily Standup — ${todayDate}`,
+    `${yp} SP livrés hier · ${tp} SP prévus aujourd'hui · ${bp} SP bloqués`,
     "",
-    `Hier (${yesterdayDate}):`,
+    `Hier (${yesterdayDate}) — ${yp} SP:`,
     fmtList(yesterday),
     "",
-    `Aujourd'hui (${todayDate}):`,
+    `Aujourd'hui (${todayDate}) — ${tp} SP:`,
     fmtList(today),
     "",
-    `Blocages:`,
+    `Blocages — ${bp} SP:`,
     fmtList(blockers),
   ].join("\n");
 }
@@ -183,6 +190,24 @@ export default function StandupPanel({ open, onOpenChange }) {
           </div>
         </div>
 
+        <div
+          className="surface rounded-sm p-4 mt-5 grid grid-cols-3 gap-3"
+          data-testid="standup-sp-summary"
+        >
+          <div>
+            <p className="label-mono text-[#00F298]">SP HIER</p>
+            <p className="font-heading font-black text-2xl mt-1 text-[#00F298]">{sumSP(yesterday)}</p>
+          </div>
+          <div>
+            <p className="label-mono text-[#00E5FF]">SP AUJ.</p>
+            <p className="font-heading font-black text-2xl mt-1 text-[#00E5FF]">{sumSP(today)}</p>
+          </div>
+          <div>
+            <p className="label-mono text-[#FF3366]">SP BLOQUÉS</p>
+            <p className="font-heading font-black text-2xl mt-1 text-[#FF3366]">{sumSP(blockers)}</p>
+          </div>
+        </div>
+
         <div className="space-y-4 mt-6">
           <Section
             title="HIER"
@@ -190,6 +215,7 @@ export default function StandupPanel({ open, onOpenChange }) {
             color="#00F298"
             icon={ListChecks}
             count={yesterday.length}
+            sp={sumSP(yesterday)}
             items={yesterday}
             empty="Pas de tâche terminée à cette date."
           />
@@ -199,6 +225,7 @@ export default function StandupPanel({ open, onOpenChange }) {
             color="#00E5FF"
             icon={Mic}
             count={today.length}
+            sp={sumSP(today)}
             items={today}
             empty="Aucune tâche en cours ou prévue aujourd'hui."
           />
@@ -208,6 +235,7 @@ export default function StandupPanel({ open, onOpenChange }) {
             color="#FF3366"
             icon={AlertOctagon}
             count={blockers.length}
+            sp={sumSP(blockers)}
             items={blockers}
             empty="Aucun blocage. ⚡"
           />

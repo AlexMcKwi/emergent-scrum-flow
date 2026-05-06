@@ -73,6 +73,15 @@ export default function TaskCard({ task, onClick, dragging, childCount = 0 }) {
             </span>
           )}
         </div>
+        {task.story_points != null && (
+          <span
+            className="font-mono text-[10px] font-semibold px-1.5 py-0.5 rounded-sm bg-[#FF5E00]/10 border border-[#FF5E00]/30 text-[#FF5E00]"
+            data-testid={`task-sp-${task.id}`}
+            title={`${task.story_points} story points`}
+          >
+            {task.story_points} SP
+          </span>
+        )}
       </div>
     </div>
   );
