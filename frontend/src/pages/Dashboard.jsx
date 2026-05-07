@@ -28,13 +28,24 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null);
 
   const load = async () => {
+  try {
     const [t, s] = await Promise.all([
       api.get("/tasks", { params: { archived: false } }),
       api.get("/stats"),
     ]);
-    setTasks(t.data);
-    setStats(s.data);
-  };
+
+    const safeTasks = Array.isArray(t.data)
+      ? t.data
+      : [];
+
+    setTasks(safeTasks);
+    setStats(s.data || {});
+  } catch (err) {
+    console.error("Dashboard load failed:", err);
+    setTasks([]);
+    setStats({});
+  }
+};
 
   useEffect(() => { load(); }, []);
 
