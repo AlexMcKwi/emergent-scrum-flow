@@ -7,7 +7,7 @@ const PASSWORD = process.env.REACT_APP_ACCESS_PASSWORD;
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     return sessionStorage.getItem("auth") === "true"
-      ? { name: "Utilisateur", email: "local@emergent.app" }
+      ? { name: "Alexander Makkaoui", email: "alexander.makkaoui@gmail.com" }
       : null;
   });
   const loading = false;
@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }) => {
   const login = (password) => {
     if (PASSWORD && password === PASSWORD) {
       sessionStorage.setItem("auth", "true");
-      setUser({ name: "Utilisateur", email: "local@emergent.app" });
+      setUser({ name: "Alexander Makkaoui", email: "alexander.makkaoui@gmail.com" });
       return true;
     }
     return false;
