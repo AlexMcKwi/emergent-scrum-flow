@@ -1,40 +1,33 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { api } from "@/lib/api";
+import React, { createContext, useContext, useState } from "react";
 
 const AuthContext = createContext(null);
 
+const PASSWORD = process.env.REACT_APP_ACCESS_PASSWORD;
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(() => {
+    return sessionStorage.getItem("auth") === "true"
+      ? { name: "Utilisateur", email: "local@emergent.app" }
+      : null;
+  });
+  const loading = false;
 
-  const checkAuth = useCallback(async () => {
-    try {
-      const res = await api.get("/auth/me");
-      setUser(res.data);
-    } catch {
-      setUser(null);
-    } finally {
-      setLoading(false);
+  const login = (password) => {
+    if (PASSWORD && password === PASSWORD) {
+      sessionStorage.setItem("auth", "true");
+      setUser({ name: "Utilisateur", email: "local@emergent.app" });
+      return true;
     }
-  }, []);
+    return false;
+  };
 
-  useEffect(() => {
-    // CRITICAL: If returning from OAuth callback, skip /me check.
-    // AuthCallback will exchange the session_id and establish the session first.
-    if (window.location.hash?.includes("session_id=")) {
-      setLoading(false);
-      return;
-    }
-    checkAuth();
-  }, [checkAuth]);
-
-  const logout = async () => {
-    try { await api.post("/auth/logout"); } catch {}
+  const logout = () => {
+    sessionStorage.removeItem("auth");
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loading, checkAuth, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
