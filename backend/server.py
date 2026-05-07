@@ -1,6 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends
 from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
@@ -15,12 +14,56 @@ import re
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
+client = AsyncIOMotorClient(
+    mongo_url,
+    tls=True,
+    tlsAllowInvalidCertificates=True,
+    serverSelectionTimeoutMS=5000,
+)
 db = client[os.environ['DB_NAME']]
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
+
+
+# ============ CORS ============
+ALLOWED_ORIGINS_EXACT = [
+    o.strip()
+    for o in os.environ.get('CORS_ORIGINS', '').split(',')
+    if o.strip()
+]
+
+def is_allowed_origin(origin: str) -> bool:
+    if not origin:
+        return False
+    if origin in ALLOWED_ORIGINS_EXACT:
+        return True
+    if re.match(r'https://emergent-scrum-flow-[a-z0-9]+-alexmckwis-projects\.vercel\.app', origin):
+        return True
+    return False
+
+@app.middleware("http")
+async def cors_middleware(request: Request, call_next):
+    origin = request.headers.get("origin", "")
+    if request.method == "OPTIONS":
+        response = Response()
+        if is_allowed_origin(origin):
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+        return response
+    response = await call_next(request)
+    if is_allowed_origin(origin):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
 
 
 # ============ Models ============
@@ -50,11 +93,11 @@ class SessionCreate(BaseModel):
 class TaskBase(BaseModel):
     title: str
     description: Optional[str] = ""
-    start_date: Optional[str] = None      # ISO date
+    start_date: Optional[str] = None
     due_date: Optional[str] = None
     actual_end_date: Optional[str] = None
-    priority: str = "medium"              # low | medium | high
-    status: str = "todo"                  # todo | in_progress | blocked | done
+    priority: str = "medium"
+    status: str = "todo"
     tags: List[str] = Field(default_factory=list)
     parent_id: Optional[str] = None
     story_points: Optional[int] = None
@@ -86,7 +129,7 @@ class Task(TaskBase):
     updated_at: str
 
 
-# ============ Auth helpers ============
+# ============ Auth ============
 async def get_current_user(request: Request) -> User:
     return User(
         user_id="user_default",
@@ -95,74 +138,16 @@ async def get_current_user(request: Request) -> User:
     )
 
 
-# ============ Auth endpoints ============
-@api_router.post("/auth/session")
-async def create_session(payload: SessionCreate, response: Response):
-    # REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-    async with httpx.AsyncClient(timeout=15) as http:
-        r = await http.get(
-            "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-            headers={"X-Session-ID": payload.session_id},
-        )
-    if r.status_code != 200:
-        raise HTTPException(status_code=401, detail="Invalid session id")
-    data = r.json()
-
-    email = data["email"]
-    existing = await db.users.find_one({"email": email}, {"_id": 0})
-    if existing:
-        user_id = existing["user_id"]
-        await db.users.update_one(
-            {"user_id": user_id},
-            {"$set": {"name": data.get("name"), "picture": data.get("picture")}},
-        )
-    else:
-        user_id = f"user_{uuid.uuid4().hex[:12]}"
-        await db.users.insert_one({
-            "user_id": user_id,
-            "email": email,
-            "name": data.get("name"),
-            "picture": data.get("picture"),
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        })
-
-    session_token = data["session_token"]
-    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
-    await db.user_sessions.insert_one({
-        "user_id": user_id,
-        "session_token": session_token,
-        "expires_at": expires_at,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    })
-
-    response.set_cookie(
-        key="session_token",
-        value=session_token,
-        max_age=7 * 24 * 60 * 60,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        path="/",
-    )
-    user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0})
-    return {"user": User.from_doc(user_doc).model_dump()}
-
-
 @api_router.get("/auth/me")
 async def auth_me(user: User = Depends(get_current_user)):
     return user
 
-
 @api_router.post("/auth/logout")
-async def logout(request: Request, response: Response):
-    token = request.cookies.get("session_token")
-    if token:
-        await db.user_sessions.delete_one({"session_token": token})
-    response.delete_cookie("session_token", path="/", samesite="none", secure=True)
+async def logout(response: Response):
     return {"ok": True}
 
 
-# ============ Task endpoints ============
+# ============ Tasks ============
 def _task_from_doc(doc: dict) -> Task:
     return Task(**doc)
 
@@ -213,7 +198,6 @@ async def update_task(task_id: str, payload: TaskUpdate, user: User = Depends(ge
             raise HTTPException(status_code=404, detail="Not found")
         return _task_from_doc(doc)
 
-    # Auto-set actual_end_date when status flips to done
     if updates.get("status") == "done":
         existing = await db.tasks.find_one({"id": task_id, "user_id": user.user_id}, {"_id": 0})
         if existing and not existing.get("actual_end_date"):
@@ -232,7 +216,6 @@ async def update_task(task_id: str, payload: TaskUpdate, user: User = Depends(ge
 
 @api_router.delete("/tasks/{task_id}")
 async def delete_task(task_id: str, user: User = Depends(get_current_user)):
-    # Also unlink children
     await db.tasks.update_many(
         {"parent_id": task_id, "user_id": user.user_id},
         {"$set": {"parent_id": None}},
@@ -281,13 +264,9 @@ async def get_stats(user: User = Depends(get_current_user)):
     archived = 0
     avg_duration_days = 0.0
     durations = []
-
-    # Story points
     total_points_completed = 0
     points_active = 0
 
-    # Build last 8 weeks (Mon-Sun), oldest first
-    # Today's Monday
     today_monday = today_dt - timedelta(days=today_dt.weekday())
     weeks = []
     for i in range(7, -1, -1):
@@ -298,7 +277,6 @@ async def get_stats(user: User = Depends(get_current_user)):
     for d in docs:
         if d.get("archived"):
             archived += 1
-            # archived tasks still count their delivered points if they were done
             sp = d.get("story_points") or 0
             if d.get("status") == "done" and sp:
                 total_points_completed += sp
@@ -364,57 +342,7 @@ async def get_stats(user: User = Depends(get_current_user)):
 
 app.include_router(api_router)
 
-ALLOWED_ORIGINS_EXACT = [
-    o.strip()
-    for o in os.environ.get('CORS_ORIGINS', '').split(',')
-    if o.strip()
-]
-
-def is_allowed_origin(origin: str) -> bool:
-    if not origin:
-        return False
-    if origin in ALLOWED_ORIGINS_EXACT:
-        return True
-    # Autoriser toutes les preview URLs Vercel du projet
-    if re.match(r'https://emergent-scrum-flow-[a-z0-9]+-alexmckwis-projects\.vercel\.app', origin):
-        return True
-    return False
-
-@app.middleware("http")
-async def cors_middleware(request: Request, call_next):
-    origin = request.headers.get("origin", "")
-    if request.method == "OPTIONS":
-        response = Response()
-        if is_allowed_origin(origin):
-            response.headers["Access-Control-Allow-Origin"] = origin
-            response.headers["Access-Control-Allow-Credentials"] = "true"
-            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
-            response.headers["Access-Control-Allow-Headers"] = "*"
-        return response
-    response = await call_next(request)
-    if is_allowed_origin(origin):
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
-        response.headers["Access-Control-Allow-Headers"] = "*"
-    return response
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
-
-@app.on_event("startup")
-async def ensure_default_user():
-    existing = await db.users.find_one({"user_id": "user_default"})
-    if not existing:
-        await db.users.insert_one({
-            "user_id": "user_default",
-            "email": "alexander.makkaoui@gmail.com",
-            "name": "Alexander Makkaoui",
-            "picture": None,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        })
