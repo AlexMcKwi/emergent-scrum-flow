@@ -87,30 +87,11 @@ class Task(TaskBase):
 
 # ============ Auth helpers ============
 async def get_current_user(request: Request) -> User:
-    token = request.cookies.get("session_token")
-    if not token:
-        auth = request.headers.get("Authorization")
-        if auth and auth.startswith("Bearer "):
-            token = auth[7:]
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    session_doc = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
-    if not session_doc:
-        raise HTTPException(status_code=401, detail="Invalid session")
-
-    expires_at = session_doc.get("expires_at")
-    if isinstance(expires_at, str):
-        expires_at = datetime.fromisoformat(expires_at)
-    if expires_at and expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
-    if expires_at and expires_at < datetime.now(timezone.utc):
-        raise HTTPException(status_code=401, detail="Session expired")
-
-    user_doc = await db.users.find_one({"user_id": session_doc["user_id"]}, {"_id": 0})
-    if not user_doc:
-        raise HTTPException(status_code=401, detail="User not found")
-    return User.from_doc(user_doc)
+    return User(
+        user_id="user_default",
+        email="alexander.makkaoui@gmail.com",
+        name="Alexander Makkaoui",
+    )
 
 
 # ============ Auth endpoints ============
@@ -397,3 +378,15 @@ logger = logging.getLogger(__name__)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+
+@app.on_event("startup")
+async def ensure_default_user():
+    existing = await db.users.find_one({"user_id": "user_default"})
+    if not existing:
+        await db.users.insert_one({
+            "user_id": "user_default",
+            "email": "alexander.makkaoui@gmail.com",
+            "name": "Alexander Makkaoui",
+            "picture": None,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
