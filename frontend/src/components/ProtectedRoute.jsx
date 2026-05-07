@@ -20,7 +20,7 @@ export default function ProtectedRoute({ children }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0A0A0B]">
       <div className="bg-[#111113] border border-[#2A2A2E] rounded-xl p-8 w-full max-w-sm flex flex-col gap-6">
-        <h1 className="text-white text-xl font-semibold text-center">Emergent Scrum Flow</h1>
+        <h1 className="text-white text-xl font-semibold text-center">Authentifiez vous Alexander...</h1>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <input
             type="password"
